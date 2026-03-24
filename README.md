@@ -73,8 +73,8 @@ Add to your `stack.yaml` or `cabal` file:
 
 ```yaml
 extra-deps:
-  - git: https://github.com/your-org/telegram-bot-extra.git
-    commit: <commit-hash>
+  - github: BenefitWizard/telegram-bot-extra
+    commit: 1fff0d5e2f85395634a1225bb16773cab3b28279
 ```
 
 ## Dependencies
