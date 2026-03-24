@@ -36,6 +36,7 @@ library
   build-depends:
       base >=4.7 && <5
     , servant
+    , servant-client
     , servant-server
     , telegram-bot-api
     , telegram-bot-simple
@@ -57,6 +58,7 @@ test-suite telegram-bot-extra-test
     , hspec
     , hspec-wai
     , servant
+    , servant-client
     , servant-server
     , telegram-bot-api
     , telegram-bot-extra

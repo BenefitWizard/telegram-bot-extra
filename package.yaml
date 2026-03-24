@@ -26,6 +26,7 @@ dependencies:
   - telegram-bot-api
   - servant
   - servant-server
+  - servant-client
 
 ghc-options:
   - -Wall

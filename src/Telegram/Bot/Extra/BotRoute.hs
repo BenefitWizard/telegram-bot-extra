@@ -16,12 +16,13 @@ import Servant
 import Servant.Server.Internal.Router
 
 import Control.Monad (void)
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Text
 import GHC.Conc (readTVarIO)
+import Servant.Client (ClientEnv)
 import Telegram.Bot.API (Token (..), Update)
 import Telegram.Bot.Simple (BotApp (..))
-import Telegram.Bot.Simple.BotApp.Internal (BotEnv (..), asyncLink, issueAction)
+import Telegram.Bot.Simple.BotApp.Internal (BotEnv (..), asyncLink, defaultBotEnv, issueAction, processActionsIndefinitely)
 
 fromToken :: Token -> ForToken a
 fromToken (Token tk) = TaggedToken tk
@@ -46,6 +47,12 @@ type BotApi tokenType = ForToken tokenType :> ReqBody '[JSON] Update :> Post '[J
 
 botApi :: Proxy (BotApi tokenType)
 botApi = Proxy
+
+makeBotHandler :: (MonadIO m) => ClientEnv -> BotApp state update -> m (Update -> Servant.Handler ())
+makeBotHandler clientEnv botApp = do
+  botEnv <- liftIO $ defaultBotEnv botApp clientEnv
+  void $ liftIO $ processActionsIndefinitely botApp botEnv
+  pure $ server botApp botEnv
 
 server :: BotApp model action -> BotEnv model action -> Server (BotApi tokenType)
 server BotApp{..} botEnv@BotEnv{..} =
