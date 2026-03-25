@@ -6,6 +6,8 @@ A Haskell library providing Servant-based routing utilities for Telegram bots us
 
 This library provides a `ForToken` Servant combinator that dynamically creates routes based on Telegram bot tokens. This is particularly useful for webhook-based Telegram bots where the token is embedded in the URL path for security.
 
+Example of usage: https://github.com/BenefitWizard/HTMLecho
+
 ## Features
 
 - **Token-based routing**: Automatically creates URL paths based on bot tokens
