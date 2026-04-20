@@ -26,15 +26,26 @@ source-repository head
 library
   exposed-modules:
       Telegram.Bot.Extra.BotRoute
+      Telegram.Bot.Extra.CommandParser
   other-modules:
       Paths_telegram_bot_extra
   autogen-modules:
       Paths_telegram_bot_extra
   hs-source-dirs:
       src
+  default-extensions:
+      MultiWayIf
+      OverloadedStrings
+      GADTs
+      FlexibleContexts
+      FlexibleInstances
+      TypeFamilies
+      TypeApplications
+      StrictData
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      attoparsec
+    , base >=4.7 && <5
     , servant
     , servant-client
     , servant-server
@@ -47,6 +58,8 @@ test-suite telegram-bot-extra-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      CommandParserSpec
+      RouteSpec
       Paths_telegram_bot_extra
   autogen-modules:
       Paths_telegram_bot_extra
@@ -54,7 +67,8 @@ test-suite telegram-bot-extra-test
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      attoparsec
+    , base >=4.7 && <5
     , hspec
     , hspec-wai
     , servant

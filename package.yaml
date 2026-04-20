@@ -17,7 +17,8 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description: Please see the README on GitHub at <https://github.com/BenefitWizard/telegram-bot-extra#readme>
+description: Please see the README on GitHub at
+  <https://github.com/BenefitWizard/telegram-bot-extra#readme>
 
 dependencies:
   - base >= 4.7 && < 5
@@ -27,6 +28,7 @@ dependencies:
   - servant
   - servant-server
   - servant-client
+  - attoparsec
 
 ghc-options:
   - -Wall
@@ -41,6 +43,15 @@ ghc-options:
 
 library:
   source-dirs: src
+  default-extensions:
+    - MultiWayIf
+    - OverloadedStrings
+    - GADTs
+    - FlexibleContexts
+    - FlexibleInstances
+    - TypeFamilies
+    - TypeApplications
+    - StrictData
 
 tests:
   telegram-bot-extra-test:
