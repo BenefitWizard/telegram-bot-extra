@@ -27,6 +27,8 @@ library
   exposed-modules:
       Telegram.Bot.Extra.BotRoute
       Telegram.Bot.Extra.CommandParser
+      Telegram.Bot.Extra.Headless
+      Telegram.Bot.Extra.Polling
   other-modules:
       Paths_telegram_bot_extra
   autogen-modules:
@@ -49,6 +51,7 @@ library
     , servant
     , servant-client
     , servant-server
+    , stm
     , telegram-bot-api
     , telegram-bot-simple
     , text
@@ -59,6 +62,9 @@ test-suite telegram-bot-extra-test
   main-is: Spec.hs
   other-modules:
       CommandParserSpec
+      HeadlessSpec
+      PollingSpec
+      RawBotSpec
       RouteSpec
       Paths_telegram_bot_extra
   autogen-modules:
@@ -67,13 +73,17 @@ test-suite telegram-bot-extra-test
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      attoparsec
+      aeson
+    , async
+    , attoparsec
     , base >=4.7 && <5
+    , bytestring
     , hspec
     , hspec-wai
     , servant
     , servant-client
     , servant-server
+    , stm
     , telegram-bot-api
     , telegram-bot-extra
     , telegram-bot-simple

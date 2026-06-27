@@ -1,9 +1,13 @@
 # telegram-bot-extra
 
-A small Haskell library with two focused additions for Telegram bots:
+A small Haskell library that gives [telegram-bot-api](https://hackage.haskell.org/package/telegram-bot-api) bots three ways to receive `Update`s, plus Servant routing and command parsing:
 
-- Servant routing helpers for webhook endpoints keyed by a bot token
-- Attoparsec-based parsers for Telegram slash commands and command arguments
+- **Webhook** endpoints via a Servant combinator keyed by a bot token (`Telegram.Bot.Extra.BotRoute`)
+- **Long-polling** of `getUpdates` (`Telegram.Bot.Extra.Polling`)
+- **Headless** queue-fed dispatch for tests, simulation, and replay (`Telegram.Bot.Extra.Headless`)
+- Attoparsec-based parsers for Telegram slash commands and arguments (`Telegram.Bot.Extra.CommandParser`)
+
+All three runners take the same raw `Update -> IO ()` action type and dispatch every update fire-and-forget in a linked background thread (the webhook answers `200 OK` without waiting). They block forever; stop by cancelling the thread that runs them. The webhook and headless runners take no `ClientEnv` — you capture whatever you need (e.g. a `Servant.Client.ClientEnv` for `telegram-bot-api`) inside the action. Only `runPollingBot` takes a `ClientEnv`, because it must call `getUpdates`.
 
 The library is built around [telegram-bot-simple](https://github.com/fizruk/telegram-bot-simple), [telegram-bot-api](https://hackage.haskell.org/package/telegram-bot-api), and Servant.
 
@@ -64,6 +68,62 @@ The test suite also verifies that token-based routing composes with additional p
 GET /bot123456:ABC/info
 ```
 
+#### Raw handlers (bypass `BotApp`)
+
+If you do not want to use the `BotApp`/`BotEnv` machinery from `telegram-bot-simple`, you can build a Servant `Server` (or a webhook handler) directly from a raw `Update -> IO ()` action. Each update is dispatched fire-and-forget via `asyncLink`, so the webhook answers `200 OK` immediately. Neither function takes a `ClientEnv` — capture it inside the action.
+
+All three raw runners take an explicit `onActionError :: SomeException -> IO ()` fallback: when the user action throws, this is invoked (log it, emit a metric, ignore it — your choice) and the exception is contained, so a single failing update never stops the runner. (By contrast `telegram-bot-simple`'s `startPolling` hardcodes `print`-on-error.)
+
+```haskell
+serverWithAction
+  :: (SomeException -> IO ())  -- ^ invoked if the action throws
+  -> (Update -> IO ())
+  -> Server (BotApi tokenType)
+makeRawBotHandler
+  :: MonadIO m
+  => (SomeException -> IO ())  -- ^ invoked if the action throws
+  -> (Update -> IO ())
+  -> m (Update -> Servant.Handler ())
+```
+
+`serverWithAction` builds the full `Server` for `BotApi`; `makeRawBotHandler` returns just the `Update -> Handler ()` function, handy when you compose it into a larger Servant application yourself.
+
+##### Example: a bot in an arbitrary monad
+
+Reduce your handler to `IO` at the call site, capturing whatever it needs (here, a `ClientEnv` to send replies via `telegram-bot-api`):
+
+```haskell
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
+
+import Network.Wai (Application)
+import Servant
+import Servant.Client (ClientEnv)
+import System.IO (hPutStrLn, stderr)
+import Telegram.Bot.API (Token, Update)
+import Telegram.Bot.Extra.BotRoute
+
+-- Your handler can live in any monad, as long as you can run it down to IO.
+myHandler :: ClientEnv -> Update -> IO ()
+myHandler clientEnv update = do
+  -- call telegram-bot-api directly here using clientEnv
+  pure ()
+
+-- Decide what happens when an action throws (here: log to stderr).
+onActionError :: SomeException -> IO ()
+onActionError e = hPutStrLn stderr ("action failed: " <> show e)
+
+type MyBotApi = BotApi Token
+
+app :: Token -> ClientEnv -> Application
+app token clientEnv =
+  serveWithContext botApi ctx (serverWithAction onActionError (myHandler clientEnv))
+  where
+    ctx = fromToken token :. EmptyContext
+```
+
+The same `Update -> IO ()` action can also be fed to `runPollingBot` (long-poll source, needs the `ClientEnv` to call `getUpdates`) or `runHeadlessBot` (queue-fed source, no `ClientEnv`/network) — see those modules below.
+
 ### `Telegram.Bot.Extra.CommandParser`
 
 This module contains small Attoparsec parsers for Telegram slash commands.
@@ -108,6 +168,95 @@ Examples of supported input:
 /custom some trailing text
 ```
 
+### `Telegram.Bot.Extra.Polling`
+
+This module provides a long-polling runner that calls `getUpdates` and dispatches each `Update` to the same raw `Update -> IO ()` action type as the webhook runners, fire-and-forget via `asyncLink`. On a network error it sleeps for `retryDelay` microseconds and retries. It blocks forever; stop by cancelling the thread that runs it.
+
+This is the only runner that takes a `ClientEnv`, because it must call `getUpdates`. It captures the `ClientEnv` so your action can call `telegram-bot-api` directly.
+
+The core API is:
+
+```haskell
+runPollingBot
+  :: MonadIO m
+  => (SomeException -> IO ())  -- ^ onActionError: invoked if the action throws
+  -> Int                        -- ^ retryDelay: microseconds to sleep before retrying on a network error
+  -> ClientEnv
+  -> (Update -> IO ())
+  -> m a
+nextOffset :: [Update] -> Maybe UpdateId
+```
+
+`nextOffset` is the pure offset-advancement helper: `max(updateUpdateId) + 1`, or `Nothing` for an empty page. It is unit-tested and useful if you implement your own polling loop.
+
+#### Example
+
+```haskell
+import Servant.Client (ClientEnv)
+import System.IO (hPutStrLn, stderr)
+import Telegram.Bot.API (Update)
+import Telegram.Bot.Extra.Polling
+
+-- | runPollingBot owns the ClientEnv (needed for getUpdates) and passes
+-- every update to the same Update -> IO () action type. Capture the
+-- ClientEnv inside the action to send replies.
+main :: ClientEnv -> IO ()
+main clientEnv =
+  runPollingBot onActionError 1000000 clientEnv $ \update ->
+    myHandler clientEnv update
+  where
+    onActionError e = hPutStrLn stderr ("action failed: " <> show e)
+```
+
+### `Telegram.Bot.Extra.Headless`
+
+This module provides a queue-fed runner that reads `Update`s from a bounded `Control.Concurrent.STM.TBQueue` and dispatches each to the same raw `Update -> IO ()` action, fire-and-forget via `asyncLink`. It needs no `ClientEnv` and no network — ideal for tests, simulation, and replay of recorded updates. It blocks forever (blocking on the empty queue, so no busy-wait); stop by cancelling the thread that runs it. The bounded queue gives the producer natural backpressure.
+
+The core API is:
+
+```haskell
+runHeadlessBot
+  :: MonadIO m
+  => (SomeException -> IO ())  -- ^ onActionError: invoked if the action throws
+  -> TBQueue Update
+  -> (Update -> IO ())
+  -> m a
+feedUpdates :: TBQueue Update -> [Update] -> IO ()
+```
+
+`feedUpdates` is the test/replay helper: it writes a list of `Update`s into the queue, one atomically per item.
+
+#### Headless test recipe
+
+Construct a `TBQueue`, run `runHeadlessBot` under `withAsync`, `feedUpdates`, and observe the dispatched update via an `MVar` with a `timeout`. The runner is auto-cancelled by `withAsync` when the block ends. No `ClientEnv` or network is involved.
+
+```haskell
+import Control.Concurrent.Async (withAsync)
+import Control.Concurrent.MVar (newEmptyMVar, putMVar, readMVar)
+import Control.Concurrent.STM (TBQueue, newTBQueueIO)
+import Control.Exception (SomeException)
+import System.Timeout (timeout)
+import Telegram.Bot.API (Update)
+import Telegram.Bot.Extra.Headless
+
+headlessTest :: [Update] -> IO (Maybe Update)
+headlessTest updates = do
+  queue  <- newTBQueueIO 16
+  result <- newEmptyMVar
+  let onActionError :: SomeException -> IO ()
+      onActionError _ = pure ()   -- ignore action errors in this test
+  -- Run the bot in a background thread; withAsync cancels it on exit.
+  -- Feed and observe INSIDE the block so the runner isn't cancelled
+  -- before the fire-and-forget dispatch has a chance to run.
+  withAsync
+    (runHeadlessBot onActionError queue $ \upd -> putMVar result upd)
+    $ \_ -> do
+      feedUpdates queue updates
+      -- Observe the dispatched update, with a bounded timeout
+      -- so a broken dispatch fails instead of hanging.
+      timeout 1000000 (readMVar result)
+```
+
 ## Installation
 
 This repository currently builds as package `telegram-bot-extra` version `0.1.0.0`.
@@ -131,6 +280,7 @@ Library dependencies from the current package definition:
 - `servant`
 - `servant-client`
 - `servant-server`
+- `stm` (GHC boot library; used by `Telegram.Bot.Extra.Headless` for `TBQueue`)
 - `telegram-bot-api`
 - `telegram-bot-simple`
 - `text`
@@ -147,6 +297,9 @@ Current tests cover:
 
 - token-based route matching for `ForToken`
 - command parsing behavior for all helpers in `Telegram.Bot.Extra.CommandParser`
+- raw webhook handler (`serverWithAction`) returning `200 OK` and dispatching the update
+- polling offset advancement (`nextOffset`)
+- headless queue-fed dispatch via `runHeadlessBot` / `feedUpdates`
 
 ## License
 

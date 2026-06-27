@@ -29,6 +29,7 @@ dependencies:
   - servant-server
   - servant-client
   - attoparsec
+  - stm
 
 ghc-options:
   - -Wall
@@ -69,3 +70,7 @@ tests:
       - hspec-wai
       - wai
       - warp
+      - aeson
+      - bytestring
+      - stm
+      - async
