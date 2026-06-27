@@ -1,2 +1,5 @@
 .stack-work/
+.worktrees/
+docs/
+.DS_Store
 *~
