@@ -9,27 +9,27 @@ packages:
     pantry-tree:
       sha256: ed323b5116f3214b3018ad03ddb895c7a0959be4a9c52e860564820e72f93842
       size: 1789
-    sha256: 02b70f2d87f2bad5d1e195ff6dab2657592b7a195c677ba5f9f3ddf23d1b261c
-    size: 133977
+    sha256: b5b80d5c5417c0a3b187c2474ba850a0a1a36c09a3a15a264c59f12a33a9c2f3
+    size: 134562
     subdir: telegram-bot-simple
-    url: https://github.com/fizruk/telegram-bot-simple/archive/74e1dd4f30d344623453caa788ab5f70b9f3919b.tar.gz
+    url: https://github.com/BenefitWizard/telegram-bot-simple/archive/4183793bbfd077d1bb87f78ef43d25bbdce242cb.tar.gz
     version: 0.14.4
   original:
     subdir: telegram-bot-simple
-    url: https://github.com/fizruk/telegram-bot-simple/archive/74e1dd4f30d344623453caa788ab5f70b9f3919b.tar.gz
+    url: https://github.com/BenefitWizard/telegram-bot-simple/archive/4183793bbfd077d1bb87f78ef43d25bbdce242cb.tar.gz
 - completed:
     name: telegram-bot-api
     pantry-tree:
-      sha256: 7b1bafe4dfd1e695709ee84f21d9fb46bab46251425226679b7274bffcd4985d
+      sha256: 257c58bd2d937dce78ca0aae4d1bbfa02cad2c099b3ec3f3c43d0dc7f331506c
       size: 19237
-    sha256: 02b70f2d87f2bad5d1e195ff6dab2657592b7a195c677ba5f9f3ddf23d1b261c
-    size: 133977
+    sha256: b5b80d5c5417c0a3b187c2474ba850a0a1a36c09a3a15a264c59f12a33a9c2f3
+    size: 134562
     subdir: telegram-bot-api
-    url: https://github.com/fizruk/telegram-bot-simple/archive/74e1dd4f30d344623453caa788ab5f70b9f3919b.tar.gz
+    url: https://github.com/BenefitWizard/telegram-bot-simple/archive/4183793bbfd077d1bb87f78ef43d25bbdce242cb.tar.gz
     version: 7.4.5
   original:
     subdir: telegram-bot-api
-    url: https://github.com/fizruk/telegram-bot-simple/archive/74e1dd4f30d344623453caa788ab5f70b9f3919b.tar.gz
+    url: https://github.com/BenefitWizard/telegram-bot-simple/archive/4183793bbfd077d1bb87f78ef43d25bbdce242cb.tar.gz
 - completed:
     name: servant-multipart-client
     pantry-tree:
